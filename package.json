@@ -1,0 +1,9 @@
+{
+  "name": "imagen-escondida",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "¿Hay algo escondido en esta imagen? Firmas, bytes tras el fin de archivo, hashes y EXIF, todo en el navegador.",
+  "scripts": { "test": "node --test" },
+  "license": "MIT"
+}

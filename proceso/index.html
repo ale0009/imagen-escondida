@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>Cómo se hizo · ¿Hay algo escondido en esta imagen?</title>
+  <meta name="description" content="Del laboratorio de esteganografía y el caso The Rhino Hunt a una herramienta forense que corre en el navegador.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bangers&family=IBM+Plex+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="../css/estilo.css">
+  <script type="module" src="../js/proceso.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <header class="cabecera">
+    <span class="kanji" aria-hidden="true">記録</span>
+    <div>
+      <p class="antetitulo">Proceso · ¿Hay algo escondido en esta imagen?</p>
+      <h1>Cómo se hizo</h1>
+    </div>
+    <nav class="nav" aria-label="Secciones">
+      <a class="boton-linea" href="../">Volver a la herramienta</a>
+      <button type="button" class="boton-linea" id="tema">Tema: auto</button>
+    </nav>
+  </header>
+
+  <main class="articulo" id="contenido">
+    <nav class="indice vineta" aria-label="En esta página">
+      <ol>
+        <li><a href="#problema">El problema</a></li>
+        <li><a href="#investigaciones">Las investigaciones</a></li>
+        <li><a href="#metodo">Método y gráficas</a></li>
+        <li><a href="#diseno">Decisiones de diseño</a></li>
+        <li><a href="#limites">Limitaciones</a></li>
+        <li><a href="#erratas">Fe de erratas</a></li>
+        <li><a href="#fuentes">Fuentes</a></li>
+      </ol>
+    </nav>
+
+    <section id="problema" class="bloque">
+      <h2>El problema</h2>
+      <p>Todo formato de archivo tiene un <strong>inicio</strong> y un <strong>fin</strong> reconocibles. Un JPG empieza con <code>FF D8 FF</code> y termina con <code>FF D9</code>; un PNG empieza con <code>89 50 4E 47</code> y termina en el bloque <code>IEND</code>. Un visor de imágenes lee hasta ese fin y se detiene: <strong>lo que venga después no lo dibuja nadie</strong>.</p>
+      <p>Por eso el truco más viejo para esconder un archivo es pegarlo al final de una foto. La foto se ve igual, pesa un poco más y por dentro trae un texto, un ZIP o lo que sea. La pregunta de la herramienta es la que se hace un perito al recibir una imagen: <em>¿esto termina donde debería?</em></p>
+      <dl class="glosario">
+        <dt>Firma mágica</dt><dd>Los primeros bytes de un archivo, que identifican su formato real aunque la extensión diga otra cosa.</dd>
+        <dt>Hash</dt><dd>Una huella de tamaño fijo calculada del contenido: si cambia un solo bit, la huella cambia por completo.</dd>
+        <dt>Cadena de custodia</dt><dd>El registro que prueba que la evidencia no se alteró desde que se recogió hasta que llega al juez.</dd>
+        <dt>Carving</dt><dd>Recuperar archivos buscando sus firmas de inicio y fin en los bytes crudos de un disco, sin ayuda del sistema de archivos.</dd>
+        <dt>Esteganografía</dt><dd>Esconder información dentro de otro archivo de forma que no se note que está ahí.</dd>
+      </dl>
+    </section>
+
+    <section id="investigaciones" class="bloque">
+      <h2>Las investigaciones</h2>
+
+      <div class="dos-col">
+        <article class="vineta">
+          <h3>1 · Laboratorio de esteganografía con PowerShell</h3>
+          <p class="autoria">Trabajo de Mario</p>
+          <p>Objetivo del laboratorio: ocultar un archivo de texto dentro de una imagen JPG usando solo PowerShell en Windows, extraerlo después y <strong>probar con hashes</strong> que la operación funcionó.</p>
+          <ol>
+            <li>Preparar la imagen y el texto en la misma carpeta.</li>
+            <li>Pegar los bytes del texto a los de la imagen.</li>
+            <li>Calcular el hash de la imagen original y de la modificada: deben ser <strong>distintos</strong>.</li>
+            <li>Extraer el texto leyendo los últimos bytes (parámetro <code>-Tail</code>).</li>
+            <li>Comparar el hash del texto original y del extraído: deben ser <strong>iguales</strong>.</li>
+          </ol>
+          <p>La conclusión del propio informe es la semilla de esta herramienta: el método no es seguro para información crítica, porque <strong>un análisis forense puede detectar los bytes añadidos</strong>. Aquí construimos ese análisis.</p>
+        </article>
+
+        <article class="vineta">
+          <h3>2 · Apuntes: inicio y fin de archivo</h3>
+          <p class="autoria">Clase de informática forense, 21 de febrero de 2025</p>
+          <p>La idea central de la clase: un archivo abierto en crudo (por ejemplo, con el Bloc de notas) muestra sus marcas de inicio y fin, y con ellas se puede reconstruir aunque el disco esté dañado. Con esas marcas el <em>carving</em> dice «del sector tal al sector tal hay un JPG, de aquí a allá un PDF».</p>
+          <p>También se vio que recuperar no es lo mismo que leer: un archivo recuperado puede estar incompleto o protegido con contraseña, y aun así su tamaño o su estructura delatan que trae una carga extra.</p>
+          <p class="nota-fuente">Los apuntes son una transcripción automática con muchos errores de reconocimiento; los valores exactos de las firmas los tomamos de las especificaciones de cada formato (ver Fuentes).</p>
+        </article>
+      </div>
+
+      <article class="vineta separado">
+        <h3>3 · El caso «The Rhino Hunt» (NIST CFReDS)</h3>
+        <p class="autoria">Resuelto por Mario y David · 24 de abril de 2025</p>
+        <p>Un caso público de entrenamiento forense. En el relato, una ciudad castiga tener nueve o más imágenes distintas de rinocerontes; un administrador de red detecta tráfico sospechoso y se incautan <strong>una memoria USB formateada</strong> y <strong>tres trazas de red</strong>. El disco duro del sospechoso ya no estaba.</p>
+        <div class="dos-col">
+          <div>
+            <h3>Qué hicimos</h3>
+            <ol class="etapas">
+              <li><strong>md5sum</strong>: verificar que las cuatro evidencias no cambiaron.</li>
+              <li><strong>Autopsy</strong>: abrir la imagen de la USB (FAT16) y ver lo borrado.</li>
+              <li><strong>PhotoRec</strong>: carving del espacio libre: JPG, GIF y un documento.</li>
+              <li><strong>Wireshark</strong>: credenciales y transferencias FTP y HTTP en las trazas.</li>
+              <li><strong>jpseek</strong>: sacar imágenes escondidas con jphide dentro de otras fotos.</li>
+            </ol>
+          </div>
+          <div>
+            <h3>Qué encontramos</h3>
+            <ul>
+              <li>Un diario recuperado de la USB nombra quién le dio la cuenta FTP al sospechoso.</li>
+              <li>Por FTP se subió un ZIP con imágenes; por HTTP se descargaron otras.</li>
+              <li>Dos fotos de cocodrilo escondían, con esteganografía, dos de rinoceronte.</li>
+              <li><strong>La pieza clave fue un hash</strong>: una imagen recuperada de la USB tenía el mismo MD5 que la del ZIP capturado en la red. Eso une las dos evidencias.</li>
+            </ul>
+          </div>
+        </div>
+        <h3>Huellas de la evidencia (de nuestro informe)</h3>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead><tr><th>Archivo</th><th>Qué es</th><th>MD5 verificado</th></tr></thead>
+            <tbody>
+              <tr><td><code>RHINOUSB.dd</code></td><td>Imagen de la USB</td><td><code>80348c58eec4c328ef1f7709adc56a54</code></td></tr>
+              <tr><td><code>rhino.log</code></td><td>Red (Telnet/FTP)</td><td><code>c0d0093eb1664cd7b73f3a5225ae3f30</code></td></tr>
+              <tr><td><code>rhino2.log</code></td><td>Red (HTTP)</td><td><code>cd21eaf4acfb50f71ffff857d7968341</code></td></tr>
+              <tr><td><code>rhino3.log</code></td><td>Red (HTTP)</td><td><code>7e29f9d67346df25faaf18efcd95fc30</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="nota-fuente">Omitimos a propósito usuarios, contraseñas y claves que aparecen en el caso: no hacen falta para entender el método.</p>
+      </article>
+    </section>
+
+    <section id="metodo" class="bloque">
+      <h2>Método y gráficas</h2>
+      <p>La herramienta hace en el navegador lo mismo que hicimos a mano: <strong>firma</strong> (¿la extensión dice la verdad?), <strong>fin de archivo</strong> (¿hay bytes de más?), <strong>huellas</strong> (MD5 y SHA-256 para el acta) y <strong>metadatos</strong> (¿la foto dice dónde se tomó?).</p>
+
+      <figure class="vineta figura">
+        <h3>Estructura de un JPG, segmento por segmento</h3>
+        <div id="g-segmentos" class="g-scroll g-caja"><p class="tenue">Cargando el ejemplo…</p></div>
+        <figcaption>Medido sobre <code>ejemplos/sospechosa.jpg</code>, generado por nosotros con <code>scripts/generar_ejemplos.py</code>. SOI = inicio, APP = metadatos, DQT/DHT = tablas, SOF = tamaño y color, SOS = arranque de los datos, EOI = fin (<code>FF D9</code>).</figcaption>
+      </figure>
+
+      <div class="dos-col">
+        <figure class="vineta figura">
+          <h3>Flujo de la cadena de custodia</h3>
+          <svg viewBox="0 0 520 400" role="img" aria-labelledby="g-cc-t g-cc-d" class="grafica">
+            <title id="g-cc-t">Flujo de la cadena de custodia</title>
+            <desc id="g-cc-d">1 Adquirir copia bit a bit. 2 Huella del original con MD5 y SHA-256. 3 Trabajar sobre una copia. 4 Analizar: firmas, fin de archivo, carving. 5 Volver a calcular la huella y comparar. 6 Informe con las huellas.</desc>
+            <defs><marker id="punta" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="g-punta"/></marker></defs>
+            <rect x="20" y="20" width="210" height="96" class="g-caja-t"/>
+            <text x="34" y="50" class="g-tit">1 · ADQUIRIR</text>
+            <text x="34" y="74" class="g-sub">Copia bit a bit del medio</text>
+            <text x="34" y="94" class="g-sub">(imagen .dd de la USB)</text>
+            <rect x="290" y="20" width="210" height="96" class="g-caja-c"/>
+            <text x="304" y="50" class="g-tit">2 · HUELLA</text>
+            <text x="304" y="74" class="g-sub">MD5 y SHA-256 del original</text>
+            <text x="304" y="94" class="g-sub">esta herramienta lo hace</text>
+            <rect x="290" y="152" width="210" height="96" class="g-caja-t"/>
+            <text x="304" y="182" class="g-tit">3 · COPIA</text>
+            <text x="304" y="206" class="g-sub">Se analiza la copia,</text>
+            <text x="304" y="226" class="g-sub">nunca el original</text>
+            <rect x="20" y="152" width="210" height="96" class="g-caja-c"/>
+            <text x="34" y="182" class="g-tit">4 · ANALIZAR</text>
+            <text x="34" y="206" class="g-sub">Firmas, fin de archivo, carving</text>
+            <text x="34" y="226" class="g-sub">esta herramienta lo hace</text>
+            <rect x="20" y="284" width="210" height="96" class="g-caja-t"/>
+            <text x="34" y="314" class="g-tit">5 · COMPARAR</text>
+            <text x="34" y="338" class="g-sub">Nueva huella = la del paso 2</text>
+            <text x="34" y="358" class="g-sub">si no, la evidencia se contaminó</text>
+            <rect x="290" y="284" width="210" height="96" class="g-caja-r"/>
+            <text x="304" y="314" class="g-tit-b">6 · INFORME</text>
+            <text x="304" y="338" class="g-sub-b">Las huellas van en el acta</text>
+            <text x="304" y="358" class="g-sub-b">(como la tabla del Rhino Hunt)</text>
+            <path d="M230 68 H286" class="g-flecha" marker-end="url(#punta)"/>
+            <path d="M395 116 V148" class="g-flecha" marker-end="url(#punta)"/>
+            <path d="M290 200 H234" class="g-flecha" marker-end="url(#punta)"/>
+            <path d="M125 248 V280" class="g-flecha" marker-end="url(#punta)"/>
+            <path d="M230 332 H286" class="g-flecha" marker-end="url(#punta)"/>
+          </svg>
+          <figcaption>Las cajas en cian son los pasos que cubre la herramienta. Basado en el procedimiento que seguimos en el Rhino Hunt y en el laboratorio de esteganografía.</figcaption>
+        </figure>
+
+        <div class="vineta figura">
+          <h3>Firmas que reconoce</h3>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead><tr><th>Formato</th><th>Inicio</th><th>Fin</th></tr></thead>
+              <tbody>
+                <tr><td>JPG</td><td><code>FF D8 FF</code></td><td><code>FF D9</code> (recorriendo segmentos)</td></tr>
+                <tr><td>PNG</td><td><code>89 50 4E 47 0D 0A 1A 0A</code></td><td>bloque <code>IEND</code> + CRC</td></tr>
+                <tr><td>GIF</td><td><code>47 49 46 38 ?? 61</code></td><td>byte <code>3B</code></td></tr>
+                <tr><td>PDF</td><td><code>25 50 44 46 2D</code></td><td>último <code>%%EOF</code></td></tr>
+                <tr><td>ZIP, DOCX…</td><td><code>50 4B 03 04</code></td><td>registro <code>50 4B 05 06</code></td></tr>
+                <tr><td>BMP / WebP</td><td><code>42 4D</code> / <code>RIFF…WEBP</code></td><td>tamaño de la cabecera</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tenue">Además identifica (sin buscar su fin) RAR, 7-Zip, GZIP, TIFF, ICO, MP3, OLE de Office antiguo y ejecutables EXE y ELF.</p>
+        </div>
+      </div>
+
+      <div class="vineta separado">
+        <h3>Los dos ejemplos, medidos</h3>
+        <p id="cifras-ejemplo" class="tenue">Cargando…</p>
+        <p class="nota-fuente">Cifras calculadas aquí, sobre los archivos de ejemplo; no vienen de los trabajos originales.</p>
+      </div>
+    </section>
+
+    <section id="diseno" class="bloque">
+      <h2>Decisiones de diseño</h2>
+      <div class="dos-col">
+        <ol class="decisiones">
+          <li><strong>Recorrer la estructura, no buscar «el primer FF D9».</strong> Una foto de celular trae una miniatura dentro del EXIF, y esa miniatura tiene su propio <code>FF D9</code>. Buscarlo a ciegas cortaría la foto a la mitad; buscar el último fallaría si lo escondido también trae uno. Por eso saltamos segmento a segmento.</li>
+          <li><strong>MD5 escrito a mano.</strong> WebCrypto, la API de cifrado del navegador, no incluye MD5 porque ya no es seguro. Pero MD5 sigue en las actas y en <code>md5sum</code>, así que lo implementamos y lo probamos contra los 7 vectores oficiales de la RFC 1321. Al lado va SHA-256, que sí resiste.</li>
+          <li><strong>Nada sale del navegador.</strong> La página declara una política de seguridad (CSP) que solo permite conexiones a su propio sitio: aunque alguien quisiera, el archivo no se puede enviar a otro servidor.</li>
+          <li><strong>Veredicto de videojuego, con criterio a la vista.</strong> Extensión que miente: 40 puntos. Datos tras el fin: 60. Estructura rota: 15. GPS y relleno solo avisan. 0 = LIMPIA, 1 a 39 = RARA, 40 o más = ¡SOSPECHOSA! (criterio nuestro, calculado aquí).</li>
+          <li><strong>El relleno no es delito.</strong> Algunas cámaras rellenan con ceros después del fin; eso se marca como aviso, no como sospecha.</li>
+        </ol>
+        <div class="vineta">
+          <h3>Muestras de diseño</h3>
+          <div class="paleta" aria-label="Paleta">
+            <span class="p1">Papel <code>#F9F9F7</code></span>
+            <span class="osc p2">Tinta <code>#0A090A</code></span>
+            <span class="osc p3">Alerta <code>#CB433E</code></span>
+            <span class="p4">Dato frío <code>#438FB8</code></span>
+            <span class="osc p5">Noche <code>#141C33</code></span>
+            <span class="osc p6">Bermellón <code>#BA3937</code></span>
+          </div>
+          <h3>Tres sellos de veredicto</h3>
+          <div class="sellos-demo">
+            <p class="veredicto"><span class="v-limpia">LIMPIA</span></p>
+            <p class="veredicto"><span class="v-rara">RARA</span></p>
+            <p class="veredicto"><span class="v-sospechosa">¡SOSPECHOSA!</span></p>
+          </div>
+          <h3>Versiones</h3>
+          <p class="boceto"><strong>v1:</strong> <s>una tabla con todos los bytes del archivo</s> → ilegible en celular y lenta con fotos grandes.<br><strong>v2:</strong> solo dos ventanas del visor hexadecimal: el inicio (la firma) y la frontera entre el fin y lo añadido, con colores por zona.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="limites" class="bloque">
+      <h2>Limitaciones</h2>
+      <ul>
+        <li><strong>No detecta esteganografía LSB.</strong> LSB (bit menos significativo) cambia el último bit del color de cada píxel: un rojo 200 pasa a 201. El archivo sigue siendo una imagen perfectamente válida, termina donde debe y no tiene bytes de más; solo cambian los valores de los píxeles. Detectarlo pide estadística sobre la imagen decodificada (pruebas como chi-cuadrado o análisis RS), y aun así con mensajes cortos es casi imposible.</li>
+        <li><strong>Tampoco detecta jphide.</strong> En el Rhino Hunt las fotos de cocodrilo escondían rinocerontes con jphide, que mete los datos en los coeficientes comprimidos del JPG. Esta herramienta las habría marcado como LIMPIAS: para sacarlas hizo falta <code>jpseek</code> y la contraseña.</li>
+        <li><strong>Lo que esconde en metadatos o en comentarios</strong> solo se ve en parte: mostramos los campos EXIF básicos y los comentarios JPEG, no XMP ni los bloques de texto de PNG.</li>
+        <li><strong>Archivos políglotas</strong> (válidos a la vez como dos formatos) o con datos al <em>inicio</em> en lugar del final no se analizan.</li>
+        <li><strong>EXIF solo para JPG</strong>, y todo el archivo se carga en memoria: el límite es 200 MB.</li>
+      </ul>
+      <p class="etica vineta"><strong>Uso ético.</strong> Esta herramienta es para revisar tus propios archivos, aprender o hacer peritajes con autorización. Revisar archivos ajenos sin permiso puede ser acceso abusivo a un sistema informático (Ley 1273 de 2009, art. 269A). Si encuentras evidencia de un delito, no la modifiques: guarda el hash y repórtala.</p>
+    </section>
+
+    <section id="erratas" class="bloque">
+      <h2>Fe de erratas</h2>
+      <div class="vineta errata">
+        <h3>Incoherencias en nuestro informe del Rhino Hunt</h3>
+        <ul>
+          <li>Dice «4 imágenes de rinoceronte» recuperadas por carving, pero la lista que sigue tiene <strong>5 nombres</strong>.</li>
+          <li>Describe al sospechoso como «estudiante de doctorado en la universidad desde 1972»: el año parece un error de transcripción, no un dato del caso.</li>
+          <li>En la lista de hashes, el último valor quedó pegado al nombre del archivo (<code>…95fc30rhino3.log</code>). La tabla final del mismo informe los separa bien, y esa es la que usamos aquí.</li>
+          
+        </ul>
+      </div>
+    </section>
+
+    <section id="fuentes" class="bloque">
+      <h2>Fuentes</h2>
+      <ol class="fuentes">
+        <li>Puerta, M. <em>Esteganografía en Windows usando PowerShell</em>. Laboratorio de informática forense, 2025 (documento propio).</li>
+        <li>Puerta, M. y Rincón, D. <em>Solución del caso «The Rhino Hunt»</em>. Informática forense, 24 de abril de 2025 (documento propio).</li>
+        <li>Apuntes de la clase de informática forense del 21 de febrero de 2025 (transcripción propia).</li>
+        <li>NIST. <em>Computer Forensic Reference Data Sets (CFReDS)</em>, caso «The Rhino Hunt». <a href="https://cfreds.nist.gov/">cfreds.nist.gov</a></li>
+        <li>Rivest, R. <em>RFC 1321: The MD5 Message-Digest Algorithm</em>, 1992. <a href="https://www.rfc-editor.org/rfc/rfc1321">rfc-editor.org/rfc/rfc1321</a></li>
+        <li>ITU-T. <em>Recomendación T.81 (JPEG)</em>, 1992. <a href="https://www.w3.org/Graphics/JPEG/itu-t81.pdf">w3.org/Graphics/JPEG/itu-t81.pdf</a></li>
+        <li>W3C. <em>Portable Network Graphics (PNG) Specification</em>. <a href="https://www.w3.org/TR/png-3/">w3.org/TR/png-3</a></li>
+        <li>CompuServe. <em>GIF89a Specification</em>. <a href="https://www.w3.org/Graphics/GIF/spec-gif89a.txt">w3.org/Graphics/GIF/spec-gif89a.txt</a></li>
+        <li>PKWARE. <em>ZIP File Format Specification (APPNOTE.TXT)</em>. <a href="https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT">pkware.cachefly.net</a></li>
+        <li>CIPA. <em>Exif 2.32 (DC-008)</em>, etiquetas de GPS e IFD.</li>
+        <li>Congreso de Colombia. <em>Ley 1273 de 2009</em>, delitos informáticos.</li>
+      </ol>
+    </section>
+
+    <a class="volver" href="../">Volver a la herramienta</a>
+  </main>
+
+  <footer class="pie">
+    <p class="creditos"><a href="https://github.com/ale0009">Mario Puerta</a> (github.com/ale0009) × <a href="https://www.linkedin.com/in/davidalexanderrinconcorredorkuronoma/">David Rincón «Kuronoma»</a> (LinkedIn) · <a href="#">Portafolio</a></p>
+    <p>Código MIT. Las imágenes de ejemplo las generamos nosotros con un script del repositorio.</p>
+  </footer>
+</body>
+</html>

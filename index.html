@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>¿Hay algo escondido en esta imagen?</title>
+  <meta name="description" content="Revisa firma, bytes después del fin de archivo, hashes MD5 y SHA-256 y metadatos EXIF de un archivo, sin subirlo a ningún lado.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bangers&family=IBM+Plex+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="css/estilo.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#principal">Saltar al contenido</a>
+  <header class="cabecera">
+    <span class="kanji" aria-hidden="true">隠</span>
+    <div>
+      <p class="antetitulo">Forense de bolsillo · nada sale de tu navegador</p>
+      <h1>¿Hay algo escondido en esta imagen?</h1>
+    </div>
+    <nav class="nav" aria-label="Secciones">
+      <a class="boton-linea" href="proceso/">Cómo se hizo</a>
+      <button class="boton-linea" id="tema" type="button">Tema: auto</button>
+    </nav>
+  </header>
+
+  <main id="principal" class="tablero">
+    <section class="vineta entrada" aria-labelledby="t-entrada">
+      <h2 id="t-entrada" class="rotulo">Evidencia</h2>
+      <label class="zona" id="zona" for="archivo">
+        <span class="zona-grande">Suelta un archivo aquí</span>
+        <span class="zona-chica">o <u>elige uno</u> · JPG, PNG, GIF, PDF, ZIP… · se analiza en tu equipo</span>
+      </label>
+      <input id="archivo" type="file" class="oculto-visual">
+      <div class="ejemplos" role="group" aria-label="Cargar un ejemplo">
+        <span class="ejemplos-t">Ejemplos:</span>
+        <button class="mini" type="button" data-ejemplo="sospechosa.jpg">sospechosa.jpg</button>
+        <button class="mini" type="button" data-ejemplo="limpia.png">limpia.png</button>
+      </div>
+      <figure class="muestra">
+        <img id="miniatura" alt="" hidden>
+        <figcaption>
+          <span id="nombre" class="nombre">—</span>
+          <span id="chip-ejemplo" class="chip chip-ejemplo" hidden>Ejemplo</span>
+          <span id="tamano" class="dato"></span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="vineta respuesta" aria-labelledby="t-veredicto" aria-live="polite">
+      <h2 id="t-veredicto" class="rotulo">Veredicto</h2>
+      <p class="veredicto"><span id="veredicto">…</span></p>
+      <div class="medidor" role="meter" aria-label="Nivel de sospecha" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="medidor">
+        <span class="medidor-t">Nivel de sospecha</span>
+        <span class="barra"><span id="barra-relleno"></span></span>
+        <span class="medidor-n" id="puntos">0</span>
+      </div>
+      <ol id="pruebas" class="pruebas"></ol>
+    </section>
+
+    <section class="vineta hashes" aria-labelledby="t-hashes">
+      <h2 id="t-hashes" class="rotulo">Huellas · cadena de custodia</h2>
+      <dl class="huellas">
+        <dt>MD5</dt><dd><code id="h-md5">—</code> <button class="mini" type="button" data-copiar="h-md5">Copiar</button></dd>
+        <dt>SHA-256</dt><dd><code id="h-sha">—</code> <button class="mini" type="button" data-copiar="h-sha">Copiar</button></dd>
+      </dl>
+      <label class="comparar" for="esperado">¿Te dieron un hash? Pégalo y compáralo</label>
+      <input id="esperado" class="campo" type="text" spellcheck="false" autocomplete="off" placeholder="md5 o sha-256">
+      <p id="comparacion" class="comparacion" aria-live="polite"></p>
+    </section>
+
+    <section class="vineta apendice" id="panel-apendice" aria-labelledby="t-apendice" hidden>
+      <h2 id="t-apendice" class="rotulo rotulo-rojo">Lo que venía escondido</h2>
+      <p id="ap-desc"></p>
+      <ul id="ap-entradas" class="entradas"></ul>
+      <div class="acciones">
+        <button class="boton-linea" id="ap-descargar" type="button">Descargar el apéndice</button>
+      </div>
+      <pre id="ap-vista" class="vista" tabindex="0" hidden></pre>
+    </section>
+
+    <section class="vineta hex" aria-labelledby="t-hex">
+      <h2 id="t-hex" class="rotulo">Visor hexadecimal</h2>
+      <p class="leyenda"><span class="z z-firma">firma</span> <span class="z z-fin">marcador de fin</span> <span class="z z-apendice">datos añadidos</span></p>
+      <div id="hex"></div>
+    </section>
+
+    <section class="vineta exif" aria-labelledby="t-exif">
+      <h2 id="t-exif" class="rotulo">Metadatos</h2>
+      <div id="exif"><p class="tenue">Solo para JPG.</p></div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p class="etica"><strong>Uso ético:</strong> analiza solo archivos tuyos o que tengas permiso de revisar. Acceder sin autorización a datos ajenos es delito en Colombia (Ley 1273 de 2009, art. 269A).</p>
+    <p class="creditos"><a href="https://github.com/ale0009">Mario Puerta</a> (github.com/ale0009) × <a href="https://www.linkedin.com/in/davidalexanderrinconcorredorkuronoma/">David Rincón «Kuronoma»</a> (LinkedIn) · <a href="#">Portafolio</a></p>
+    <p>Sale de nuestros laboratorios de informática forense. Código MIT · <a href="proceso/">Cómo se hizo</a></p>
+  </footer>
+</body>
+</html>
